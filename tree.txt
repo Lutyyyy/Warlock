@@ -1,0 +1,104 @@
+.
+├── README.md
+├── Warlock
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-38.pyc
+│   │   ├── settings.cpython-38.pyc
+│   │   ├── urls.cpython-38.pyc
+│   │   └── wsgi.cpython-38.pyc
+│   ├── asgi.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── db.sqlite3
+├── game
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-38.pyc
+│   │   ├── admin.cpython-38.pyc
+│   │   ├── apps.cpython-38.pyc
+│   │   ├── urls.cpython-38.pyc
+│   │   └── views.cpython-38.pyc
+│   ├── admin.py
+│   ├── apps.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       └── __init__.cpython-38.pyc
+│   ├── models
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       └── __init__.cpython-38.pyc
+│   ├── static
+│   │   ├── css
+│   │   │   └── game.css
+│   │   ├── image
+│   │   │   ├── logo.png
+│   │   │   ├── menu
+│   │   │   │   ├── background.jpg
+│   │   │   │   ├── city_dusk.gif
+│   │   │   │   ├── root-courtyard.gif
+│   │   │   │   └── snow-hut.gif
+│   │   │   ├── playground
+│   │   │   └── settings
+│   │   └── js
+│   │       ├── dist
+│   │       │   └── game.js
+│   │       └── src
+│   │           ├── menu
+│   │           │   └── zbase.js
+│   │           ├── playground
+│   │           │   └── zbase.js
+│   │           ├── settings
+│   │           │   └── zbase.js
+│   │           └── zbase.js
+│   ├── templates
+│   │   ├── menu
+│   │   ├── multiends
+│   │   │   └── web.html
+│   │   ├── playground
+│   │   └── settings
+│   ├── tests.py
+│   ├── urls
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-38.pyc
+│   │   │   └── index.cpython-38.pyc
+│   │   ├── index.py
+│   │   ├── menu
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-38.pyc
+│   │   │   │   └── index.cpython-38.pyc
+│   │   │   └── index.py
+│   │   ├── playground
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-38.pyc
+│   │   │   │   └── index.cpython-38.pyc
+│   │   │   └── index.py
+│   │   └── settings
+│   │       ├── __init__.py
+│   │       ├── __pycache__
+│   │       │   ├── __init__.cpython-38.pyc
+│   │       │   └── index.cpython-38.pyc
+│   │       └── index.py
+│   └── views
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   ├── __init__.cpython-38.pyc
+│       │   └── index.cpython-38.pyc
+│       ├── index.py
+│       ├── menu
+│       │   └── __init__.py
+│       ├── playground
+│       │   └── __init__.py
+│       └── settings
+│           └── __init__.py
+├── manage.py
+├── scripts
+│   └── compress_game_js.sh
+└── tree.txt
+
+39 directories, 62 files
