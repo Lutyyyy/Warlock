@@ -7,12 +7,12 @@
     <!--import my own css-->
     <link rel="stylesheet" href="{% static 'css/game.css' %}">
     <link rel="icon" href="{% static 'image/logo.png' %}">
-    <script src="{% static 'js/dist/game.js' %}"></script>
 </head>
 
 <body style="margin: 0%;">
     <div id="my_game"></div>
-    <script>
+    <script type="module">
+        import { MyGame } from "{% static 'js/dist/game.js' %}";
         $(document).ready(function () {
             let my_game = new MyGame("my_game"); // all the pages are in this object
         });
