@@ -18,6 +18,6 @@ from django.urls import path, include
 
 urlpatterns = [
     # path('game/', include('game.urls')),
-    # path('', include('game.urls')),  # Since we have only one app, take the main page as the app page
+    path('', include('game.urls.index')),  # Since we have only one app, take the main page as the app page
     path('admin/', admin.site.urls),
 ]
