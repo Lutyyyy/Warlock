@@ -3,7 +3,7 @@ export class MyGame {
         // console.log("Create Game!");
         this.id = id;
         this.$game_obj = $('#' + id);
-        // this.menu = new GameMenu(this);
+        this.menu = new GameMenu(this);
         this.playground = new GamePlayground(this);
     }
 

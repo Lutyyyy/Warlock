@@ -34,12 +34,13 @@ class Player extends GameEngine {
             return false;
         });
         this.playground.game_map.$canvas.mousedown(function (e) {
+            const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
-                outer.move_to(e.clientX, e.clientY);
+                outer.move_to(e.clientX - rectangle.left, e.clientY - rectangle.top);
             }
             else if (e.which == 1) { // left click
                 if (outer.current_skill === "fireball") {
-                    outer.shoot_fireball(e.clientX, e.clientY);
+                    outer.shoot_fireball(e.clientX - rectangle.left, e.clientY - rectangle.top);
                 }
                 outer.current_skill = null;
             }

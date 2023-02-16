@@ -99,7 +99,8 @@ let GAME_ANIMATION = function (timestamp) {
     requestAnimationFrame(GAME_ANIMATION);
 }
 
-requestAnimationFrame(GAME_ANIMATION);class GameMap extends GameEngine {
+requestAnimationFrame(GAME_ANIMATION);
+class GameMap extends GameEngine {
     constructor(playground) {
         super();
         this.playground = playground;
@@ -123,7 +124,8 @@ requestAnimationFrame(GAME_ANIMATION);class GameMap extends GameEngine {
         this.ctx.fillStyle = "rgba(0, 0, 0, 0.2)"; // Game map background color
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
-}class Particle extends GameEngine {
+}
+class Particle extends GameEngine {
     constructor(x, y, radius, color, speed, vx, vy, playground, move_length) {
         super();
         this.playground = playground;
@@ -160,7 +162,8 @@ requestAnimationFrame(GAME_ANIMATION);class GameMap extends GameEngine {
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
-}class Player extends GameEngine {
+}
+class Player extends GameEngine {
     constructor(playground, x, y, radius, color, speed, is_me) {
         super();
         this.playground = playground;
@@ -196,12 +199,13 @@ requestAnimationFrame(GAME_ANIMATION);class GameMap extends GameEngine {
             return false;
         });
         this.playground.game_map.$canvas.mousedown(function (e) {
+            const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
-                outer.move_to(e.clientX, e.clientY);
+                outer.move_to(e.clientX - rectangle.left, e.clientY - rectangle.top);
             }
             else if (e.which == 1) { // left click
                 if (outer.current_skill === "fireball") {
-                    outer.shoot_fireball(e.clientX, e.clientY);
+                    outer.shoot_fireball(e.clientX - rectangle.left, e.clientY - rectangle.top);
                 }
                 outer.current_skill = null;
             }
@@ -313,7 +317,8 @@ requestAnimationFrame(GAME_ANIMATION);class GameMap extends GameEngine {
             }
         }
     }
-}class FireBall extends GameEngine {
+}
+class FireBall extends GameEngine {
     constructor(playground, player, x, y, radius, vx, vy, speed, color, move_length, damage) {
         super();
         this.playground = playground;
@@ -376,28 +381,15 @@ requestAnimationFrame(GAME_ANIMATION);class GameMap extends GameEngine {
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
-}class GamePlayground {
+}
+class GamePlayground {
     constructor(root) {
         this.root = root;
         this.$playground = $(`
             <div class="game_playground">
             </div>
         `);
-        // this.hide();
-        this.root.$game_obj.append(this.$playground);
-
-        this.width = this.$playground.width();
-        this.height = this.$playground.height();
-        this.game_map = new GameMap(this);
-        this.players = []; // maintain all the players
-
-        // create myself
-        this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, "white", this.height * 0.15, true));
-
-        for (let i = 0; i < 5; i++) {
-            this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, this.get_random_color(), this.height * 0.15, false));
-        }
-
+        this.hide();
         this.start();
     }
 
@@ -414,6 +406,19 @@ requestAnimationFrame(GAME_ANIMATION);class GameMap extends GameEngine {
 
     show() { // show the playground page
         this.$playground.show();
+        this.root.$game_obj.append(this.$playground);
+
+        this.width = this.$playground.width();
+        this.height = this.$playground.height();
+        this.game_map = new GameMap(this);
+        this.players = []; // maintain all the players
+
+        // create myself
+        this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, "white", this.height * 0.15, true));
+
+        for (let i = 0; i < 5; i++) {
+            this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, this.get_random_color(), this.height * 0.15, false));
+        }
     }
 
     hide() { // hid the playground page
@@ -425,7 +430,7 @@ export class MyGame {
         // console.log("Create Game!");
         this.id = id;
         this.$game_obj = $('#' + id);
-        // this.menu = new GameMenu(this);
+        this.menu = new GameMenu(this);
         this.playground = new GamePlayground(this);
     }
 
