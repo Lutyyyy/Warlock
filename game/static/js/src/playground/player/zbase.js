@@ -14,6 +14,7 @@ class Player extends GameEngine {
         this.is_me = is_me;
         this.eps = 0.1;
         this.current_skill = null;
+        this.spent_time = 0;
     }
 
     start() {
@@ -100,9 +101,13 @@ class Player extends GameEngine {
     }
 
     update() {
-        if (Math.random() < 1 / 180) { // shoot at the player with a probability 1/180, which means enemy will shoot at player every 3 secs.
-            let player = this.playground.players[0];
-            this.shoot_fireball(player.x, player.y);
+        this.spent_time += this.time_delta / 1000;
+        // shoot at the player with a probability 1/300, which means enemy will shoot at player every 5 secs and 5 secs after start.
+        if (!this.is_me && this.spent_time > 5 && Math.random() < 1 / 300) {
+            let player = this.playground.players[Math.floor(Math.random() * this.playground.players.length)];
+            let tx = player.x + player.speed * this.vx * this.time_delta / 1000 * 0.3;
+            let ty = player.y + player.speed * this.vy * this.time_delta / 1000 * 0.3;
+            this.shoot_fireball(tx, ty);
         }
 
         if (this.damage_speed > 10) {
@@ -137,5 +142,13 @@ class Player extends GameEngine {
         this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
+    }
+
+    on_destroy() {
+        for (let i = 0; i < this.playground.players.length; i++) {
+            if (this.playground.players[i] === this) {
+                this.playground.players.splice(i, 1);
+            }
+        }
     }
 }
