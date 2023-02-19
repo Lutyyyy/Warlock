@@ -7,7 +7,6 @@ class GameMap extends GameEngine {
         this.ctx.canvas.width = this.playground.width;
         this.ctx.canvas.height = this.playground.height;
         this.playground.$playground.append(this.$canvas);
-
     }
 
     start() {

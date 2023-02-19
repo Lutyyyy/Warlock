@@ -13,11 +13,12 @@ class GameMenu {
                     </div>
                     <br>
                     <div class="game_menu_filed_item game_menu_filed_item_settings">
-                        Settings
+                        退出
                     </div>
                 </div>
             </div>
         `);
+        this.$menu.hide();
         this.root.$game_obj.append(this.$menu); // add the menu obj to the div
         // take out the html object
         this.$single_mode = this.$menu.find('.game_menu_filed_item_single_mode');
@@ -43,6 +44,7 @@ class GameMenu {
         });
         this.$settings.click(function () {
             console.log("Click Settings");
+            outer.root.settings.logout_from_remote();
         });
     }
 
