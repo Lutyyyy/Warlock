@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from game.models.player.player import Player
 from django.contrib.auth import login
 from random import randint
+from django.http import JsonResponse
 
 '''
 Wechat instruction: https://developers.weixin.qq.com/doc/oplatform/Mobile_App/WeChat_Login/Development_Guide.html
@@ -13,14 +14,24 @@ Wechat API: https://developers.weixin.qq.com/doc/oplatform/Mobile_App/WeChat_Log
 
 def receive_code(request):
     data = request.GET
+    if "errcode" in data:
+        return JsonResponse({
+            'result': "apply failed",
+            'errcode': data['errcode'],
+            'errmag': data['errmsg'],
+        })
+        
     code = data.get('code')
     state = data.get('state')
     
-    # pass the attack
+    # handle the attack
     if not cache.has_key(state):
-        return redirect("index") # redirect to homepage
+        return JsonResponse({
+            'result': "state not exist",
+        })
+
+
     cache.delete(state)
-    
     
     # get access token
     apply_access_token_url = "https://api.weixin.qq.com/sns/oauth2/access_token"
