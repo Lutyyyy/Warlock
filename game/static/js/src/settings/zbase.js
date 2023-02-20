@@ -31,6 +31,13 @@ class Settings {
                     Register
                 </div>
                 <br><br>
+                <div class="game-settings-wechat">
+                    <img src="https://open.weixin.qq.com/zh_CN/htmledition/res/assets/res-design-download/icon24_appwx_logo.png">
+                    <br>
+                    <div class="game-settings-wechat-text">Login</div>
+                    <br>
+                </div>
+                <br><br>
                 <div class="game-settings-error-message">
                 </div>
             </div>
@@ -63,6 +70,13 @@ class Settings {
                     Login
                 </div>
                 <br><br>
+                <div class="game-settings-wechat">
+                    <img src="https://open.weixin.qq.com/zh_CN/htmledition/res/assets/res-design-download/icon24_appwx_logo.png">
+                    <br>
+                    <div class="game-settings-wechat-text">Login</div>
+                    <br>
+                </div>
+                <br><br><br>
                 <div class="game-settings-error-message">
                 </div>
             </div>
@@ -90,6 +104,8 @@ class Settings {
 
         this.$register.hide();
 
+        this.$wechat_login = this.$setttings.find('.game-settings-wechat');
+
         this.root.$game_obj.append(this.$setttings);
 
         this.start();
@@ -113,8 +129,23 @@ class Settings {
     }
 
     add_listening_events() {
+        let outer = this;
         this.add_listening_events_login();
         this.add_listening_events_register();
+        
+        this.$wechat_login.click(function() {
+            $.ajax({
+                url: "http://47.113.219.182:8000/settings/thirdparty/apply_code/",
+                type: "GET",
+                success: function(resp) {
+                    console.log(resp);
+                    if (resp.result === "success") {
+                        // redirect
+                        window.location.replace(resp.apply_code_url);
+                    }
+                }
+            });
+        });
     }
 
     add_listening_events_login() {
@@ -132,7 +163,7 @@ class Settings {
         this.$register_login.click(function() {
             outer.login();
         });
-        this.$register_submit.click(function(){
+        this.$register_submit.click(function() {
             outer.register_on_remote();
         });
     }
@@ -193,6 +224,10 @@ class Settings {
                 if (resp.result === "success") location.reload();
             }
         });
+    }
+
+    wechat_login() {
+        console.log("wechat!!!");
     }
 
     getinfo() {
