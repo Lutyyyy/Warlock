@@ -18,7 +18,7 @@ def apply_code(request):
     scope = "snsapi_login"
     state = get_state()
     
-    cache.set('state', True, 7200)  # valid for two hours
+    cache.set(state, True, 7200)  # valid for two hours
     
     # apply code from wechat
     apply_code_url = "https://open.weixin.qq.com/connect/qrconnect"

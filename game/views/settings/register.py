@@ -9,6 +9,7 @@ def register(request):
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
     password_confirm = data.get("password_confirm", "").strip()
+    photo = data.get("photo", "").strip()
     if not username or not password:
         return JsonResponse({
             'result': "Username or password can't be empty",

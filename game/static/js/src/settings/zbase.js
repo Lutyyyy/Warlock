@@ -41,6 +41,7 @@ class Settings {
                 <div class="game-settings-error-message">
                 </div>
             </div>
+            <!--- register page !-->
             <div class="game-settings-register">
                 <div class="game-settings-title">
                     REGISTER
@@ -59,9 +60,15 @@ class Settings {
                 <br>
                 <div class="game-settings-password-confirm">
                     <div class="game-settings-item">
-                        <input type="password" placeholder="Confirm password">
+                        <input type="password" placeholder="Confirm password">    
                     </div>
                 </div>
+                <!--
+                <div class="game-settings-upload">
+                    <input type="file" accept="image/*" id="1010">
+                </div>
+                <br>
+                --!>
                 <br>
                 <div class="game-settings-submit-button">
                     <button>Register</button>
@@ -76,7 +83,7 @@ class Settings {
                     <div class="game-settings-wechat-text">Login</div>
                     <br>
                 </div>
-                <br><br><br>
+                <br>
                 <div class="game-settings-error-message">
                 </div>
             </div>
@@ -101,6 +108,7 @@ class Settings {
         this.$register_submit = this.$register.find(".game-settings-submit-button button");
         this.$register_error_message = this.$register.find(".game-settings-error-message");
         this.$register_login = this.$register.find(".game-settings-option");
+        // this.$register_upload_pic = this.$register.find(".game-settings-upload input");
 
         this.$register.hide();
 
@@ -196,6 +204,12 @@ class Settings {
         let username = this.$register_username.val();
         let password = this.$register_password.val();
         let password_confirm = this.$register_confirm_password.val();
+        // let photo = this.$register_upload_pic.val();
+        // if (photo) {
+        //     console.log(photo);
+        //     var file_obj = document.getElementById("1010").files[0];
+        //     console.log(file_obj);
+        // }
         this.$register_error_message.empty();
 
         $.ajax({
@@ -205,6 +219,7 @@ class Settings {
                 username: username,
                 password: password,
                 password_confirm: password_confirm,
+                // photo: photo,
             },
             success: function(resp) {
                 console.log(resp);

@@ -114,7 +114,13 @@ class GameMap extends GameEngine {
     }
 
     start() {
+    }
 
+    resize() {
+        this.ctx.canvas.width = this.playground.width;
+        this.ctx.canvas.height = this.playground.height;
+        this.ctx.fillStyle = "rgba(0, 0, 0, 1)"; // resize the background, render a totally black canvas
+        this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
 
     update() {
@@ -138,7 +144,7 @@ class Particle extends GameEngine {
         this.friction = 0.9;
         this.color = color;
         this.move_length = move_length;
-        this.eps = 1;
+        this.eps = 0.01;
     }
 
     start() {
@@ -158,8 +164,9 @@ class Particle extends GameEngine {
     }
 
     render() {
+        let scale = this.playground.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
@@ -178,7 +185,7 @@ class Player extends GameEngine {
         this.move_distance = 0;
         this.color = color;
         this.is_me = is_me;
-        this.eps = 0.1;
+        this.eps = 0.01;
         this.current_skill = null;
         this.spent_time = 0;
 
@@ -193,8 +200,8 @@ class Player extends GameEngine {
             this.add_listening_events();
         }
         else { // robot
-            let tx = Math.random() * this.playground.width;
-            let ty = Math.random() * this.playground.height;
+            let tx = Math.random() * this.playground.width / this.playground.scale;
+            let ty = Math.random() * this.playground.height / this.playground.scale;
             this.move_to(tx, ty);
         }
     }
@@ -207,11 +214,11 @@ class Player extends GameEngine {
         this.playground.game_map.$canvas.mousedown(function (e) {
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
-                outer.move_to(e.clientX - rectangle.left, e.clientY - rectangle.top);
+                outer.move_to((e.clientX - rectangle.left) / outer.playground.scale, (e.clientY - rectangle.top) / outer.playground.scale);
             }
             else if (e.which == 1) { // left click
                 if (outer.current_skill === "fireball") {
-                    outer.shoot_fireball(e.clientX - rectangle.left, e.clientY - rectangle.top);
+                    outer.shoot_fireball((e.clientX - rectangle.left) / outer.playground.scale, (e.clientY - rectangle.top) / outer.playground.scale);
                 }
                 outer.current_skill = null;
             }
@@ -227,13 +234,13 @@ class Player extends GameEngine {
     shoot_fireball(tx, ty) {
         // console.log("Shoot fireball", tx, ty);
         let x = this.x, y = this.y;
-        let radius = this.playground.height * 0.01;
+        let radius = 0.01;
         let angle = Math.atan2(ty - this.y, tx - this.x);
         let vx = Math.cos(angle), vy = Math.sin(angle);
         let color = "orange";
-        let speed = this.playground.height * 0.5;
-        let move_len = this.playground.height * 0.8;
-        new FireBall(this.playground, this, x, y, radius, vx, vy, speed, color, move_len, this.playground.height * 0.005);
+        let speed = 0.5;
+        let move_len = 0.8;
+        new FireBall(this.playground, this, x, y, radius, vx, vy, speed, color, move_len, 0.005);
     }
 
     move_to(tx, ty) {
@@ -262,7 +269,7 @@ class Player extends GameEngine {
         }
 
         this.radius -= damage;
-        if (this.radius < 10) {
+        if (this.radius < this.eps) {
             this.destroy();
             return false;
         }
@@ -273,6 +280,11 @@ class Player extends GameEngine {
     }
 
     update() {
+        this.update_move();
+        this.render();
+    }
+
+    update_move() {
         this.spent_time += this.time_delta / 1000;
         // shoot at the player with a probability 1/300, which means enemy will shoot at player every 5 secs and 5 secs after start.
         if (!this.is_me && this.spent_time > 5 && Math.random() < 1 / 300) {
@@ -282,7 +294,7 @@ class Player extends GameEngine {
             this.shoot_fireball(tx, ty);
         }
 
-        if (this.damage_speed > 10) {
+        if (this.damage_speed > this.eps) {
             this.vx = this.vy = 0;
             this.move_distance = 0;
             this.x += this.damage_x * this.damage_speed * this.time_delta / 1000;
@@ -294,8 +306,8 @@ class Player extends GameEngine {
                 this.move_distance = 0;
                 this.vx = this.vy = 0;
                 if (!this.is_me) {
-                    let tx = Math.random() * this.playground.width;
-                    let ty = Math.random() * this.playground.height;
+                    let tx = Math.random() * this.playground.width / this.playground.scale;
+                    let ty = Math.random() * this.playground.height / this.playground.scale;
                     this.move_to(tx, ty);
                 }
             }
@@ -305,23 +317,24 @@ class Player extends GameEngine {
                 this.move_distance -= move_d;
             }
         }
-        this.render();
     }
 
     // print the circle
     render() {
+        let scale = this.playground.scale;
+        // draw by absoulute size but not relative size
         if (this.is_me) {
             this.ctx.save();
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.stroke();
             this.ctx.clip();
-            this.ctx.drawImage(this.img, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+            this.ctx.drawImage(this.img, (this.x - this.radius) * scale, (this.y - this.radius) * scale, this.radius * 2 * scale, this.radius * 2 * scale);
             this.ctx.restore();
         }
         else {
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.fillStyle = this.color;
             this.ctx.fill();
         }
@@ -349,7 +362,7 @@ class FireBall extends GameEngine {
         this.speed = speed;
         this.move_length = move_length;
         this.damage = damage;
-        this.eps = 0.1;
+        this.eps = 0.01;
     }
 
     start() {
@@ -394,8 +407,9 @@ class FireBall extends GameEngine {
     }
 
     render() {
+        let scale = this.playground.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
@@ -408,6 +422,7 @@ class GamePlayground {
             </div>
         `);
         this.hide();
+        this.root.$game_obj.append(this.$playground);
         this.start();
     }
 
@@ -417,14 +432,32 @@ class GamePlayground {
     }
 
     start() {
+        let outer = this;
+        $(window).resize(function() {
+            outer.resize();
+        });
     }
 
     update() {
     }
 
+    // resize the total operation interface
+    resize() {
+        this.width = this.$playground.width();
+        this.height = this.$playground.height();
+        // zoom by 16:9 and take the smaller one
+        let unit = Math.min(this.width / 16, this.height / 9);
+        this.width = unit * 16;
+        this.height = unit * 9;
+        this.scale = this.height;
+
+        if (this.game_map) this.game_map.resize();
+    }
+
     show() { // show the playground page
         this.$playground.show();
-        this.root.$game_obj.append(this.$playground);
+        this.resize();
+        // console.log(this.scale);
 
         this.width = this.$playground.width();
         this.height = this.$playground.height();
@@ -432,10 +465,10 @@ class GamePlayground {
         this.players = []; // maintain all the players
 
         // create myself
-        this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, "white", this.height * 0.20, true));
+        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "white", 0.20, true));
 
         for (let i = 0; i < 5; i++) {
-            this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, this.get_random_color(), this.height * 0.20, false));
+            this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, this.get_random_color(), 0.20, false));
         }
     }
 
@@ -486,6 +519,7 @@ class Settings {
                 <div class="game-settings-error-message">
                 </div>
             </div>
+            <!--- register page !-->
             <div class="game-settings-register">
                 <div class="game-settings-title">
                     REGISTER
@@ -504,9 +538,15 @@ class Settings {
                 <br>
                 <div class="game-settings-password-confirm">
                     <div class="game-settings-item">
-                        <input type="password" placeholder="Confirm password">
+                        <input type="password" placeholder="Confirm password">    
                     </div>
                 </div>
+                <!--
+                <div class="game-settings-upload">
+                    <input type="file" accept="image/*" id="1010">
+                </div>
+                <br>
+                --!>
                 <br>
                 <div class="game-settings-submit-button">
                     <button>Register</button>
@@ -521,7 +561,7 @@ class Settings {
                     <div class="game-settings-wechat-text">Login</div>
                     <br>
                 </div>
-                <br><br><br>
+                <br>
                 <div class="game-settings-error-message">
                 </div>
             </div>
@@ -546,6 +586,7 @@ class Settings {
         this.$register_submit = this.$register.find(".game-settings-submit-button button");
         this.$register_error_message = this.$register.find(".game-settings-error-message");
         this.$register_login = this.$register.find(".game-settings-option");
+        // this.$register_upload_pic = this.$register.find(".game-settings-upload input");
 
         this.$register.hide();
 
@@ -641,6 +682,12 @@ class Settings {
         let username = this.$register_username.val();
         let password = this.$register_password.val();
         let password_confirm = this.$register_confirm_password.val();
+        // let photo = this.$register_upload_pic.val();
+        // if (photo) {
+        //     console.log(photo);
+        //     var file_obj = document.getElementById("1010").files[0];
+        //     console.log(file_obj);
+        // }
         this.$register_error_message.empty();
 
         $.ajax({
@@ -650,6 +697,7 @@ class Settings {
                 username: username,
                 password: password,
                 password_confirm: password_confirm,
+                // photo: photo,
             },
             success: function(resp) {
                 console.log(resp);
