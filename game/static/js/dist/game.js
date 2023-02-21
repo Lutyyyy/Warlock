@@ -37,10 +37,11 @@ class GameMenu {
         this.$single_mode.click(function () {
             // close the menu page then open the single mode playground
             outer.hide();
-            outer.root.playground.show();
+            outer.root.playground.show("single mode");
         });
         this.$multi_mode.click(function () {
-            console.log("Click the Multi mode");
+            outer.hide();
+            outer.root.playground.show("multi mode");
         });
         this.$settings.click(function () {
             console.log("Click Settings");
@@ -172,7 +173,7 @@ class Particle extends GameEngine {
     }
 }
 class Player extends GameEngine {
-    constructor(playground, x, y, radius, color, speed, is_me) {
+    constructor(playground, x, y, radius, color, speed, character, username, photo) {
         super();
         this.playground = playground;
         this.x = x, this.y = y;
@@ -184,19 +185,22 @@ class Player extends GameEngine {
         this.speed = speed;
         this.move_distance = 0;
         this.color = color;
-        this.is_me = is_me;
+        this.character = character;
+        this.username = username;
+        this.photo = photo;
         this.eps = 0.01;
         this.current_skill = null;
         this.spent_time = 0;
 
-        if (is_me) {
+        if (character !== "robot") {
+            // all the enemy and myself should render the photo
             this.img = new Image();
-            this.img.src = this.playground.root.settings.photo;
+            this.img.src = this.photo;
         }
     }
 
     start() {
-        if (this.is_me) {
+        if (this.character === "me") {
             this.add_listening_events();
         }
         else { // robot
@@ -287,7 +291,7 @@ class Player extends GameEngine {
     update_move() {
         this.spent_time += this.time_delta / 1000;
         // shoot at the player with a probability 1/300, which means enemy will shoot at player every 5 secs and 5 secs after start.
-        if (!this.is_me && this.spent_time > 5 && Math.random() < 1 / 300) {
+        if (this.character === "robot" && this.spent_time > 5 && Math.random() < 1 / 300) {
             let player = this.playground.players[Math.floor(Math.random() * this.playground.players.length)];
             let tx = player.x + player.speed * this.vx * this.time_delta / 1000 * 0.3;
             let ty = player.y + player.speed * this.vy * this.time_delta / 1000 * 0.3;
@@ -305,7 +309,7 @@ class Player extends GameEngine {
             if (this.move_distance < this.eps) {
                 this.move_distance = 0;
                 this.vx = this.vy = 0;
-                if (!this.is_me) {
+                if (this.character === "robot") {
                     let tx = Math.random() * this.playground.width / this.playground.scale;
                     let ty = Math.random() * this.playground.height / this.playground.scale;
                     this.move_to(tx, ty);
@@ -323,7 +327,7 @@ class Player extends GameEngine {
     render() {
         let scale = this.playground.scale;
         // draw by absoulute size but not relative size
-        if (this.is_me) {
+        if (this.character !== "robot") {
             this.ctx.save();
             this.ctx.beginPath();
             this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
@@ -414,7 +418,19 @@ class FireBall extends GameEngine {
         this.ctx.fill();
     }
 }
-class GamePlayground {
+class MultiPlayerSocket {
+    constructor(playground) {
+        this.playground = playground;
+
+        this.ws = new WebSocket("wss://47.113.219.182:8000/wss/multiplayer/");
+
+        this.start();
+    }
+
+    start() {
+        
+    }
+}class GamePlayground {
     constructor(root) {
         this.root = root;
         this.$playground = $(`
@@ -454,22 +470,31 @@ class GamePlayground {
         if (this.game_map) this.game_map.resize();
     }
 
-    show() { // show the playground page
+    show(mode) { // show the playground page
         this.$playground.show();
-        this.resize();
         // console.log(this.scale);
 
         this.width = this.$playground.width();
         this.height = this.$playground.height();
         this.game_map = new GameMap(this);
+
+        this.resize();
+
         this.players = []; // maintain all the players
 
         // create myself
-        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "white", 0.20, true));
+        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "white", 0.20, "me", this.root.settings.username, this.root.settings.photo));
 
-        for (let i = 0; i < 5; i++) {
-            this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, this.get_random_color(), 0.20, false));
+        if (mode === "single mode") {
+            // create robot
+            for (let i = 0; i < 5; i++) {
+                this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, this.get_random_color(), 0.20, "robot"));
+            }
         }
+        else if (mode === "multi mode") {
+            this.mps = new MultiPlayerSocket(this); // try to establish a wss connect
+        }
+
     }
 
     hide() { // hid the playground page

@@ -38,22 +38,31 @@ class GamePlayground {
         if (this.game_map) this.game_map.resize();
     }
 
-    show() { // show the playground page
+    show(mode) { // show the playground page
         this.$playground.show();
-        this.resize();
         // console.log(this.scale);
 
         this.width = this.$playground.width();
         this.height = this.$playground.height();
         this.game_map = new GameMap(this);
+
+        this.resize();
+
         this.players = []; // maintain all the players
 
         // create myself
-        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "white", 0.20, true));
+        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "white", 0.20, "me", this.root.settings.username, this.root.settings.photo));
 
-        for (let i = 0; i < 5; i++) {
-            this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, this.get_random_color(), 0.20, false));
+        if (mode === "single mode") {
+            // create robot
+            for (let i = 0; i < 5; i++) {
+                this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, this.get_random_color(), 0.20, "robot"));
+            }
         }
+        else if (mode === "multi mode") {
+            this.mps = new MultiPlayerSocket(this); // try to establish a wss connect
+        }
+
     }
 
     hide() { // hid the playground page

@@ -37,10 +37,11 @@ class GameMenu {
         this.$single_mode.click(function () {
             // close the menu page then open the single mode playground
             outer.hide();
-            outer.root.playground.show();
+            outer.root.playground.show("single mode");
         });
         this.$multi_mode.click(function () {
-            console.log("Click the Multi mode");
+            outer.hide();
+            outer.root.playground.show("multi mode");
         });
         this.$settings.click(function () {
             console.log("Click Settings");
