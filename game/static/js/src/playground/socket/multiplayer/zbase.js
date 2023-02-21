@@ -8,6 +8,15 @@ class MultiPlayerSocket {
     }
 
     start() {
-        
+    }
+
+    send_create_player_message() {
+        this.ws.send(JSON.stringify({
+            'message': "hello",
+        }));
+    }
+
+    receive_create_player_message() {
+
     }
 }

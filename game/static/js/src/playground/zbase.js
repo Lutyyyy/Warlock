@@ -39,6 +39,7 @@ class GamePlayground {
     }
 
     show(mode) { // show the playground page
+        let outer = this;
         this.$playground.show();
         // console.log(this.scale);
 
@@ -61,6 +62,9 @@ class GamePlayground {
         }
         else if (mode === "multi mode") {
             this.mps = new MultiPlayerSocket(this); // try to establish a wss connect
+
+            this.mps.ws.onopen = function() {
+            }
         }
 
     }

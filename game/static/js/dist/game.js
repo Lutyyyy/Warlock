@@ -428,7 +428,16 @@ class MultiPlayerSocket {
     }
 
     start() {
-        
+    }
+
+    send_create_player_message() {
+        this.ws.send(JSON.stringify({
+            'message': "hello",
+        }));
+    }
+
+    receive_create_player_message() {
+
     }
 }class GamePlayground {
     constructor(root) {
@@ -471,6 +480,7 @@ class MultiPlayerSocket {
     }
 
     show(mode) { // show the playground page
+        let outer = this;
         this.$playground.show();
         // console.log(this.scale);
 
@@ -493,6 +503,9 @@ class MultiPlayerSocket {
         }
         else if (mode === "multi mode") {
             this.mps = new MultiPlayerSocket(this); // try to establish a wss connect
+
+            this.mps.ws.onopen = function() {
+            }
         }
 
     }
