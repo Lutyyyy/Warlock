@@ -49,6 +49,8 @@ class GamePlayground {
 
         this.resize();
 
+        this.mode = mode;
+
         this.players = []; // maintain all the players
 
         // create myself

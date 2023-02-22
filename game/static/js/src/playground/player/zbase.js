@@ -46,7 +46,14 @@ class Player extends GameEngine {
         this.playground.game_map.$canvas.mousedown(function (e) {
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
-                outer.move_to((e.clientX - rectangle.left) / outer.playground.scale, (e.clientY - rectangle.top) / outer.playground.scale);
+                let tx = (e.clientX - rectangle.left) / outer.playground.scale;
+                let ty = (e.clientY - rectangle.top) / outer.playground.scale;
+                outer.move_to(tx, ty);
+
+                // broadcast the move to function
+                if (outer.playground.mode === "multi mode") {
+                    outer.playground.mps.send_move_to_message(tx, ty);
+                }
             }
             else if (e.which == 1) { // left click
                 if (outer.current_skill === "fireball") {

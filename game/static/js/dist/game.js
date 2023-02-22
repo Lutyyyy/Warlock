@@ -186,6 +186,8 @@ class Particle extends GameEngine {
 }
 class Player extends GameEngine {
     constructor(playground, x, y, radius, color, speed, character, username, photo) {
+        console.log(character, username, photo);
+
         super();
         this.playground = playground;
         this.x = x, this.y = y;
@@ -215,7 +217,7 @@ class Player extends GameEngine {
         if (this.character === "me") {
             this.add_listening_events();
         }
-        else { // robot
+        else if (this.character === "robot") { // robot
             let tx = Math.random() * this.playground.width / this.playground.scale;
             let ty = Math.random() * this.playground.height / this.playground.scale;
             this.move_to(tx, ty);
@@ -230,7 +232,15 @@ class Player extends GameEngine {
         this.playground.game_map.$canvas.mousedown(function (e) {
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
-                outer.move_to((e.clientX - rectangle.left) / outer.playground.scale, (e.clientY - rectangle.top) / outer.playground.scale);
+                let tx = (e.clientX - rectangle.left) / outer.playground.scale;
+                let ty = (e.clientY - rectangle.top) / outer.playground.scale;
+                outer.move_to(tx, ty);
+
+
+                // broadcast the move to function
+                if (outer.playground.mode === "multi mode") {
+                    outer.playground.mps.send_move_to_message(tx, ty);
+                }
             }
             else if (e.which == 1) { // left click
                 if (outer.current_skill === "fireball") {
@@ -445,13 +455,34 @@ class MultiPlayerSocket {
         this.receive();
     }
 
+    // find player by uuid
+    get_player(uuid) {
+        let players = this.playground.players;
+        for (let i = 0; i < players.length; i ++) {
+            let player = players[i];
+            if (player.uuid === uuid)
+                return uuid;
+        }
+        return null;
+    }
+
     // handle the data come from client(frontend)
     receive() {
+        let outer = this;
         // callback funciton after receive data from server(backend)
         this.ws.onmessage = function(e) {
             // string-->json
             let data = JSON.parse(e.data);
-            console.log(data);
+            if (data.uuid === outer.uuid) return false;
+
+            // handle the event not sent by myself
+            let event = data.event;
+            if (event === "create_player") {
+                outer.receive_create_player_message(data.uuid, data.username, data.photo);
+            }
+            else if (event === "move_to") {
+                outer.receive_move_to_message(data.uuid, data.tx, data.ty);
+            }
         }
     }
 
@@ -467,8 +498,27 @@ class MultiPlayerSocket {
         }));
     }
 
-    receive_create_player_message() {
+    receive_create_player_message(uuid, username, photo) {
+        let player = new Player(this.playground, this.playground, this.playground.width / 2 / this.playgroud.scale, 0.5, 0.05, "white", 0.15, "enemy", username, photo);
+        player.uuid = uuid;
+        this.playground.players.push(player);
+    }
 
+    send_move_to_message(tx, ty) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "move_to",
+            'uuid': outer.uuid,
+            'tx': tx,
+            'ty': ty,
+        }));
+    }
+
+    receive_move_to_message(uuid, tx, ty) {
+        let player = this.get_player(uuid);
+        if (player) {
+            player.move_to(tx, ty);
+        }
     }
 }class GamePlayground {
     constructor(root) {
@@ -520,6 +570,8 @@ class MultiPlayerSocket {
         this.game_map = new GameMap(this);
 
         this.resize();
+
+        this.mode = mode;
 
         this.players = []; // maintain all the players
 

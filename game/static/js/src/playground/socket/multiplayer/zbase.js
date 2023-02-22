@@ -13,7 +13,18 @@ class MultiPlayerSocket {
         this.receive();
     }
 
-    // handle the data come from client(frontend)
+    // find player by uuid
+    get_player(uuid) {
+        let players = this.playground.players;
+        for (let i = 0; i < players.length; i ++) {
+            let player = players[i];
+            if (player.uuid === uuid)
+                return uuid;
+        }
+        return null;
+    }
+
+    // handle the data come from server(backend)
     receive() {
         let outer = this;
         // callback funciton after receive data from server(backend)
@@ -26,6 +37,9 @@ class MultiPlayerSocket {
             let event = data.event;
             if (event === "create_player") {
                 outer.receive_create_player_message(data.uuid, data.username, data.photo);
+            }
+            else if (event === "move_to") {
+                outer.receive_move_to_message(data.uuid, data.tx, data.ty);
             }
         }
     }
@@ -46,5 +60,24 @@ class MultiPlayerSocket {
         let player = new Player(this.playground, this.playground, this.playground.width / 2 / this.playgroud.scale, 0.5, 0.05, "white", 0.15, "enemy", username, photo);
         player.uuid = uuid;
         this.playground.players.push(player);
+    }
+
+    // send the player's moving to the server
+    send_move_to_message(tx, ty) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "move_to",
+            'uuid': outer.uuid,
+            'tx': tx,
+            'ty': ty,
+        }));
+    }
+
+    receive_move_to_message(uuid, tx, ty) {
+        let player = this.get_player(uuid);
+        // move the specific player in every window
+        if (player) {
+            player.move_to(tx, ty);
+        }
     }
 }
