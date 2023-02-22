@@ -64,6 +64,18 @@ class GameEngine {
         GAME_OBJECTS.push(this);
         this.has_call_start = false; // has executed the start() or not
         this.time_delta = 0; // The time interval between the current frame and the previous frame
+        this.uuid = this.create_uuid();
+
+    }
+
+    // create a random 9-bit id for every game object
+    create_uuid() {
+        let res = "";
+        for (let i = 0; i < 9; i ++) {
+            let x = parseInt(Math.floor(10 * Math.random())); // return a random number in [0, 10)
+            res += x;
+        }
+        return res;
     }
 
     start() { // only execute once on the first frame
@@ -422,17 +434,36 @@ class MultiPlayerSocket {
     constructor(playground) {
         this.playground = playground;
 
+        // establish the server and client
+        // according to the routing.py, it will call consumers/multiplayer/index.py connect function
         this.ws = new WebSocket("wss://47.113.219.182:8000/wss/multiplayer/");
 
         this.start();
     }
 
     start() {
+        this.receive();
     }
 
-    send_create_player_message() {
+    // handle the data come from client(frontend)
+    receive() {
+        // callback funciton after receive data from server(backend)
+        this.ws.onmessage = function(e) {
+            // string-->json
+            let data = JSON.parse(e.data);
+            console.log(data);
+        }
+    }
+
+    // send the create player messasge to backend after establishing the connection successfully
+    send_create_player_message(username, photo) {
+        let outer = this;
+        // json-->string
         this.ws.send(JSON.stringify({
-            'message': "hello",
+            'event': "create_player",
+            'uuid': outer.uuid,
+            'username': username,
+            'photo': photo
         }));
     }
 
@@ -502,9 +533,13 @@ class MultiPlayerSocket {
             }
         }
         else if (mode === "multi mode") {
-            this.mps = new MultiPlayerSocket(this); // try to establish a wss connect
+            this.mps = new MultiPlayerSocket(this); // create a wss connection try to establish a wss connect
+            this.mps.uuid = this.players[0].uuid; // my uuid
 
+            // callback function after establish the connection successfully
             this.mps.ws.onopen = function() {
+                // after connection, send the create player message to bakcend from websocket class memeber function
+                outer.mps.send_create_player_message(outer.root.settings.username, outer.root.settings.photo);
             }
         }
 

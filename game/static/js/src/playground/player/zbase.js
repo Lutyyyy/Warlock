@@ -1,5 +1,7 @@
 class Player extends GameEngine {
     constructor(playground, x, y, radius, color, speed, character, username, photo) {
+        console.log(character, username, photo);
+
         super();
         this.playground = playground;
         this.x = x, this.y = y;
@@ -29,7 +31,7 @@ class Player extends GameEngine {
         if (this.character === "me") {
             this.add_listening_events();
         }
-        else { // robot
+        else if (this.character === "robot") { // robot
             let tx = Math.random() * this.playground.width / this.playground.scale;
             let ty = Math.random() * this.playground.height / this.playground.scale;
             this.move_to(tx, ty);

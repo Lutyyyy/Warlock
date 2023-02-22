@@ -61,9 +61,13 @@ class GamePlayground {
             }
         }
         else if (mode === "multi mode") {
-            this.mps = new MultiPlayerSocket(this); // try to establish a wss connect
+            this.mps = new MultiPlayerSocket(this); // create a wss connection try to establish a wss connect
+            this.mps.uuid = this.players[0].uuid; // my uuid
 
+            // callback function after establish the connection successfully
             this.mps.ws.onopen = function() {
+                // after connection, send the create player message to bakcend from websocket class memeber function
+                outer.mps.send_create_player_message(outer.root.settings.username, outer.root.settings.photo);
             }
         }
 
