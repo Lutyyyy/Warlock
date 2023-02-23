@@ -29,18 +29,26 @@ class FireBall extends GameEngine {
             this.destroy();
             return false;
         }
+        this.update_move();
+        this.update_attack();
+
+        this.render();
+    }
+
+    update_move() {
         let move_d = Math.min(this.move_length, this.speed * this.time_delta / 1000);
         this.x += this.vx * move_d, this.y += this.vy * move_d;
         this.move_length -= move_d;
+    }
 
+    update_attack() {
         for (let i = 0; i < this.playground.players.length; i++) {
             let player = this.playground.players[i];
             if (this.player !== player && this.is_collision(player)) {
                 this.attack(player);
+                break;
             }
         }
-
-        this.render();
     }
 
     attack(player) {
@@ -61,5 +69,16 @@ class FireBall extends GameEngine {
         this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
+    }
+
+    // remove the fireball from the players' fireball array
+    on_destroy() {
+        let fireballs = this.player.fireballs;
+        for (let i = 0; i < fireballs.length; i ++) {
+            if (fireballs[i] === this) {
+                fireballs.splice(i, 1);
+                break;
+            }
+        }
     }
 }

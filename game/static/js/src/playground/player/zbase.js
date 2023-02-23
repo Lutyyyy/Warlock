@@ -19,6 +19,7 @@ class Player extends GameEngine {
         this.eps = 0.01;
         this.current_skill = null;
         this.spent_time = 0;
+        this.fireballs = [];
 
         if (character !== "robot") {
             // all the enemy and myself should render the photo
@@ -56,8 +57,14 @@ class Player extends GameEngine {
                 }
             }
             else if (e.which == 1) { // left click
+                let tx = (e.clientX - rectangle.left) / outer.playground.scale;
+                let ty = (e.clientY - rectangle.top) / outer.playground.scale;
                 if (outer.current_skill === "fireball") {
-                    outer.shoot_fireball((e.clientX - rectangle.left) / outer.playground.scale, (e.clientY - rectangle.top) / outer.playground.scale);
+                    let fireball = outer.shoot_fireball(tx, ty);
+
+                    if (outer.playground.mode === "multi mode") {
+                        outer.playground.mps.send_shoot_fireball(fireball.ball_uuid, tx, ty);
+                    }
                 }
                 outer.current_skill = null;
             }
@@ -79,7 +86,22 @@ class Player extends GameEngine {
         let color = "orange";
         let speed = 0.5;
         let move_len = 0.8;
-        new FireBall(this.playground, this, x, y, radius, vx, vy, speed, color, move_len, 0.005);
+        let fireball = new FireBall(this.playground, this, x, y, radius, vx, vy, speed, color, move_len, 0.005);
+        this.fireballs.push(fireball);
+
+        // inorder to get the uuid of the fireball
+        return fireball;
+    }
+
+    // remove the fireball from the playground's game_object array
+    destroy_fireball(uuid) {
+        for (let i = 0; i < this.fireballs.length; i ++) {
+            let fireball = this.fireballs[i];
+            if (fireball.uuid === uuid) {
+                this.fireballs.destroy();
+                break;
+            }
+        }
     }
 
     move_to(tx, ty) {
@@ -184,7 +206,9 @@ class Player extends GameEngine {
         for (let i = 0; i < this.playground.players.length; i++) {
             if (this.playground.players[i] === this) {
                 this.playground.players.splice(i, 1);
+                break;
             }
         }
     }
 }
+

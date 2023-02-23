@@ -205,6 +205,7 @@ class Player extends GameEngine {
         this.eps = 0.01;
         this.current_skill = null;
         this.spent_time = 0;
+        this.fireballs = [];
 
         if (character !== "robot") {
             // all the enemy and myself should render the photo
@@ -236,15 +237,20 @@ class Player extends GameEngine {
                 let ty = (e.clientY - rectangle.top) / outer.playground.scale;
                 outer.move_to(tx, ty);
 
-
                 // broadcast the move to function
                 if (outer.playground.mode === "multi mode") {
                     outer.playground.mps.send_move_to_message(tx, ty);
                 }
             }
             else if (e.which == 1) { // left click
+                let tx = (e.clientX - rectangle.left) / outer.playground.scale;
+                let ty = (e.clientY - rectangle.top) / outer.playground.scale;
                 if (outer.current_skill === "fireball") {
-                    outer.shoot_fireball((e.clientX - rectangle.left) / outer.playground.scale, (e.clientY - rectangle.top) / outer.playground.scale);
+                    let fireball = outer.shoot_fireball(tx, ty);
+
+                    if (outer.playground.mode === "multi mode") {
+                        outer.playground.mps.send_shoot_fireball(fireball.ball_uuid, tx, ty);
+                    }
                 }
                 outer.current_skill = null;
             }
@@ -266,7 +272,22 @@ class Player extends GameEngine {
         let color = "orange";
         let speed = 0.5;
         let move_len = 0.8;
-        new FireBall(this.playground, this, x, y, radius, vx, vy, speed, color, move_len, 0.005);
+        let fireball = new FireBall(this.playground, this, x, y, radius, vx, vy, speed, color, move_len, 0.005);
+        this.fireballs.push(fireball);
+
+        // inorder to get the uuid of the fireball
+        return fireball;
+    }
+
+    // remove the fireball from the playground's game_object array
+    destroy_fireball(uuid) {
+        for (let i = 0; i < this.fireballs.length; i ++) {
+            let fireball = this.fireballs[i];
+            if (fireball.uuid === uuid) {
+                this.fireballs.destroy();
+                break;
+            }
+        }
     }
 
     move_to(tx, ty) {
@@ -371,10 +392,12 @@ class Player extends GameEngine {
         for (let i = 0; i < this.playground.players.length; i++) {
             if (this.playground.players[i] === this) {
                 this.playground.players.splice(i, 1);
+                break;
             }
         }
     }
 }
+
 class FireBall extends GameEngine {
     constructor(playground, player, x, y, radius, vx, vy, speed, color, move_length, damage) {
         super();
@@ -406,18 +429,26 @@ class FireBall extends GameEngine {
             this.destroy();
             return false;
         }
+        this.update_move();
+        this.update_attack();
+
+        this.render();
+    }
+
+    update_move() {
         let move_d = Math.min(this.move_length, this.speed * this.time_delta / 1000);
         this.x += this.vx * move_d, this.y += this.vy * move_d;
         this.move_length -= move_d;
+    }
 
+    update_attack() {
         for (let i = 0; i < this.playground.players.length; i++) {
             let player = this.playground.players[i];
             if (this.player !== player && this.is_collision(player)) {
                 this.attack(player);
+                break;
             }
         }
-
-        this.render();
     }
 
     attack(player) {
@@ -438,6 +469,17 @@ class FireBall extends GameEngine {
         this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
+    }
+
+    // remove the fireball from the players' fireball array
+    on_destroy() {
+        let fireballs = this.player.fireballs;
+        for (let i = 0; i < fireballs.length; i ++) {
+            if (fireballs[i] === this) {
+                fireballs.splice(i, 1);
+                break;
+            }
+        }
     }
 }
 class MultiPlayerSocket {
@@ -466,7 +508,7 @@ class MultiPlayerSocket {
         return null;
     }
 
-    // handle the data come from client(frontend)
+    // handle the data come from server(backend)
     receive() {
         let outer = this;
         // callback funciton after receive data from server(backend)
@@ -482,6 +524,9 @@ class MultiPlayerSocket {
             }
             else if (event === "move_to") {
                 outer.receive_move_to_message(data.uuid, data.tx, data.ty);
+            }
+            else if (event === "shoot_fireball") {
+                outer.receive_shoot_fireball_message(uuid, data.tx, data.ty, data.ball_uuid);
             }
         }
     }
@@ -504,6 +549,7 @@ class MultiPlayerSocket {
         this.playground.players.push(player);
     }
 
+    // send the player's moving to the server
     send_move_to_message(tx, ty) {
         let outer = this;
         this.ws.send(JSON.stringify({
@@ -516,11 +562,33 @@ class MultiPlayerSocket {
 
     receive_move_to_message(uuid, tx, ty) {
         let player = this.get_player(uuid);
+        // move the specific player in every window
         if (player) {
             player.move_to(tx, ty);
         }
     }
-}class GamePlayground {
+
+    send_shoot_fireball_message(ball_uuid, tx, ty) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "shoot_fireball",
+            'uuid': outer.uuid,
+            'tx': tx,
+            'ty': ty,
+            'ball_uuid': ball_uuid,
+        }));
+    }
+
+    receive_shoot_fireball_message(uuid, tx, ty, ball_uuid) {
+        let player = this.get_player(uuid);
+        if (player) {
+            let fireball = player.shoot_fireball(tx, ty);
+            fireball.uuid = ball_uuid; // all the uuid of every window for one fireball should be the same
+        }
+    }
+}
+
+class GamePlayground {
     constructor(root) {
         this.root = root;
         this.$playground = $(`
@@ -644,7 +712,7 @@ class Settings {
                 <div class="game-settings-error-message">
                 </div>
             </div>
-            <!--- register page !-->
+            <!--- register page -->
             <div class="game-settings-register">
                 <div class="game-settings-title">
                     REGISTER
@@ -671,7 +739,7 @@ class Settings {
                     <input type="file" accept="image/*" id="1010">
                 </div>
                 <br>
-                --!>
+                -->
                 <br>
                 <div class="game-settings-submit-button">
                     <button>Register</button>

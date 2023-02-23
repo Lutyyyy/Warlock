@@ -41,7 +41,7 @@ class Settings {
                 <div class="game-settings-error-message">
                 </div>
             </div>
-            <!--- register page !-->
+            <!--- register page -->
             <div class="game-settings-register">
                 <div class="game-settings-title">
                     REGISTER
@@ -68,7 +68,7 @@ class Settings {
                     <input type="file" accept="image/*" id="1010">
                 </div>
                 <br>
-                --!>
+                -->
                 <br>
                 <div class="game-settings-submit-button">
                     <button>Register</button>
