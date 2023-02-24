@@ -17,7 +17,7 @@ class GamePlayground {
 
     start() {
         let outer = this;
-        $(window).resize(function() {
+        $(window).resize(function () {
             outer.resize();
         });
     }
@@ -50,6 +50,9 @@ class GamePlayground {
         this.resize();
 
         this.mode = mode;
+        this.status = "waiting"; // waiting --> fighting --> over
+        this.notice_board = new NoticeBoard(this);
+        this.player_count = 0; // number of people in the playground
 
         this.players = []; // maintain all the players
 
@@ -67,7 +70,7 @@ class GamePlayground {
             this.mps.uuid = this.players[0].uuid; // my uuid
 
             // callback function after establish the connection successfully
-            this.mps.ws.onopen = function() {
+            this.mps.ws.onopen = function () {
                 // after connection, send the create player message to bakcend from websocket class memeber function
                 outer.mps.send_create_player_message(outer.root.settings.username, outer.root.settings.photo);
             }

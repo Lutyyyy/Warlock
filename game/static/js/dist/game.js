@@ -145,6 +145,34 @@ class GameMap extends GameEngine {
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
 }
+class NoticeBoard extends GameEngine {
+    constructor(playground) {
+        super();
+
+        this.playground = playground;
+        this.ctx = this.playground.game_map.ctx;
+        this.text = "Ready: 0 people";
+    }
+
+    start() {
+    }
+
+    write(text) {
+        this.text = text;
+    }
+
+    update() {
+        this.render();
+    }
+
+    render() {
+        // render the text
+        this.ctx.font = "20px serif";
+        this.ctx.fillStyle = "white";
+        this.ctx.textAlign = "center";
+        this.ctx.fillText(this.text, this.playground.width / 2, 20);
+    }
+}
 class Particle extends GameEngine {
     constructor(x, y, radius, color, speed, vx, vy, playground, move_length) {
         super();
@@ -211,10 +239,22 @@ class Player extends GameEngine {
             // all the enemy and myself should render the photo
             this.img = new Image();
             this.img.src = this.photo;
+
+            if (this.character === "me") {
+                this.fireball_coldtime = 3; // 3s for cool down time
+            }
         }
     }
 
     start() {
+        this.playground.player_count ++;
+        this.playground.notice_board.write("Ready to begin: " + this.playground.player_count + " people");
+
+        if (this.playground.player_count >= 3) {
+            this.playground.status = "fighting";
+            this.playground.notice_board.write("Fighting!");
+        }
+
         if (this.character === "me") {
             this.add_listening_events();
         }
@@ -231,6 +271,8 @@ class Player extends GameEngine {
             return false;
         });
         this.playground.game_map.$canvas.mousedown(function (e) {
+            if (outer.playground.status !== "fighting") return false;
+
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
                 let tx = (e.clientX - rectangle.left) / outer.playground.scale;
@@ -243,6 +285,7 @@ class Player extends GameEngine {
                 }
             }
             else if (e.which == 1) { // left click
+                if (outer.fireball_coldtime > outer.eps) return false; // cold time
                 let tx = (e.clientX - rectangle.left) / outer.playground.scale;
                 let ty = (e.clientY - rectangle.top) / outer.playground.scale;
                 if (outer.current_skill === "fireball") {
@@ -256,6 +299,9 @@ class Player extends GameEngine {
             }
         });
         $(window).keydown(function (e) { // keycode
+            if (outer.playground.status !== "fighting") return false;
+            if (outer.fireball_coldtime > outer.eps) return false; // cold time
+
             if (e.which == 81) {
                 outer.current_skill = "fireball";
                 return false;
@@ -281,7 +327,7 @@ class Player extends GameEngine {
 
     // remove the fireball from the playground's game_object array
     destroy_fireball(uuid) {
-        for (let i = 0; i < this.fireballs.length; i ++) {
+        for (let i = 0; i < this.fireballs.length; i++) {
             let fireball = this.fireballs[i];
             if (fireball.uuid === uuid) {
                 this.fireballs.destroy();
@@ -326,13 +372,28 @@ class Player extends GameEngine {
         this.speed *= 0.8;
     }
 
+    receive_attack(x, y, angle, damage, ball_uuid, attacker) {
+        attacker.destroy_fireball(ball_uuid);
+        this.x = x;
+        this.y = y;
+        this.be_attacked(angle, damage);
+    }
+
     update() {
+        this.spent_time += this.time_delta / 1000;
+        if (this.character == "me" && this.playground.status === "fighting")
+            this.update_coldtime();
+
         this.update_move();
         this.render();
     }
 
+    update_coldtime() {
+        this.fireball_coldtime -= this.time_delta / 1000;
+        this.fireball_coldtime = Math.max(0, this.fireball_coldtime);
+    }
+
     update_move() {
-        this.spent_time += this.time_delta / 1000;
         // shoot at the player with a probability 1/300, which means enemy will shoot at player every 5 secs and 5 secs after start.
         if (this.character === "robot" && this.spent_time > 5 && Math.random() < 1 / 300) {
             let player = this.playground.players[Math.floor(Math.random() * this.playground.players.length)];
@@ -425,12 +486,17 @@ class FireBall extends GameEngine {
     }
 
     update() {
+        // out of the firing range
         if (this.move_length < this.eps) {
             this.destroy();
             return false;
         }
+
         this.update_move();
-        this.update_attack();
+
+        if (this.player.character !== "enemy") {
+            this.update_attack();
+        }
 
         this.render();
     }
@@ -454,6 +520,12 @@ class FireBall extends GameEngine {
     attack(player) {
         let angle = Math.atan2(player.y - this.y, player.x - this.x);
         player.be_attacked(angle, this.damage);
+
+        let outer = this;
+        if (this.playground.mode === "multi mode") {
+            outer.playground.mps.send_attack_message(player.uuid, player.x, player.y, angle, outer.damage, outer.uuid);
+        }
+
         this.destroy(); // destroy the fireball
     }
 
@@ -474,7 +546,7 @@ class FireBall extends GameEngine {
     // remove the fireball from the players' fireball array
     on_destroy() {
         let fireballs = this.player.fireballs;
-        for (let i = 0; i < fireballs.length; i ++) {
+        for (let i = 0; i < fireballs.length; i++) {
             if (fireballs[i] === this) {
                 fireballs.splice(i, 1);
                 break;
@@ -500,7 +572,7 @@ class MultiPlayerSocket {
     // find player by uuid
     get_player(uuid) {
         let players = this.playground.players;
-        for (let i = 0; i < players.length; i ++) {
+        for (let i = 0; i < players.length; i++) {
             let player = players[i];
             if (player.uuid === uuid)
                 return uuid;
@@ -512,7 +584,7 @@ class MultiPlayerSocket {
     receive() {
         let outer = this;
         // callback funciton after receive data from server(backend)
-        this.ws.onmessage = function(e) {
+        this.ws.onmessage = function (e) {
             // string-->json
             let data = JSON.parse(e.data);
             if (data.uuid === outer.uuid) return false;
@@ -527,6 +599,9 @@ class MultiPlayerSocket {
             }
             else if (event === "shoot_fireball") {
                 outer.receive_shoot_fireball_message(uuid, data.tx, data.ty, data.ball_uuid);
+            }
+            else if (event == "attack") {
+                outer.receive_attack_message(uuid, data.attackee_uuid, data.x, data.y, data.angle, data.damage, data.ball_uuid);
             }
         }
     }
@@ -586,8 +661,31 @@ class MultiPlayerSocket {
             fireball.uuid = ball_uuid; // all the uuid of every window for one fireball should be the same
         }
     }
-}
 
+    // should synchronize the information of the attackee and the hit fireball to delete
+    receive_attack_message(attackee_uuid, x, y, angle, damage, ball_uuid) {
+        let attacker = this.get_player(uuid);
+        let attackee = this.get_player(attackee_uuid);
+        if (attacker && attackee) {
+            // handle the attack action
+            attackee.receive_attack_message(x, y, angle, damage, ball_uuid, attacker);
+        }
+    }
+
+    send_attack_message(uuid, attackee_uuid, x, y, angle, damage, ball_uuid) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "attack",
+            'uuid': outer.uuid,
+            'attackee_uuid': attackee_uuid,
+            'x': x,
+            'y': y,
+            'angle': angle,
+            'damage': damage,
+            'ball_uuid': ball_uuid,
+        }));
+    }
+}
 class GamePlayground {
     constructor(root) {
         this.root = root;
@@ -607,7 +705,7 @@ class GamePlayground {
 
     start() {
         let outer = this;
-        $(window).resize(function() {
+        $(window).resize(function () {
             outer.resize();
         });
     }
@@ -640,6 +738,9 @@ class GamePlayground {
         this.resize();
 
         this.mode = mode;
+        this.status = "waiting"; // waiting --> fighting --> over
+        this.notice_board = new NoticeBoard(this);
+        this.player_count = 0; // number of people in the playground
 
         this.players = []; // maintain all the players
 
@@ -657,7 +758,7 @@ class GamePlayground {
             this.mps.uuid = this.players[0].uuid; // my uuid
 
             // callback function after establish the connection successfully
-            this.mps.ws.onopen = function() {
+            this.mps.ws.onopen = function () {
                 // after connection, send the create player message to bakcend from websocket class memeber function
                 outer.mps.send_create_player_message(outer.root.settings.username, outer.root.settings.photo);
             }

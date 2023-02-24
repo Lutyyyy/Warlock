@@ -16,7 +16,7 @@ class MultiPlayerSocket {
     // find player by uuid
     get_player(uuid) {
         let players = this.playground.players;
-        for (let i = 0; i < players.length; i ++) {
+        for (let i = 0; i < players.length; i++) {
             let player = players[i];
             if (player.uuid === uuid)
                 return uuid;
@@ -28,7 +28,7 @@ class MultiPlayerSocket {
     receive() {
         let outer = this;
         // callback funciton after receive data from server(backend)
-        this.ws.onmessage = function(e) {
+        this.ws.onmessage = function (e) {
             // string-->json
             let data = JSON.parse(e.data);
             if (data.uuid === outer.uuid) return false;
@@ -43,6 +43,9 @@ class MultiPlayerSocket {
             }
             else if (event === "shoot_fireball") {
                 outer.receive_shoot_fireball_message(uuid, data.tx, data.ty, data.ball_uuid);
+            }
+            else if (event == "attack") {
+                outer.receive_attack_message(uuid, data.attackee_uuid, data.x, data.y, data.angle, data.damage, data.ball_uuid);
             }
         }
     }
@@ -102,5 +105,28 @@ class MultiPlayerSocket {
             fireball.uuid = ball_uuid; // all the uuid of every window for one fireball should be the same
         }
     }
-}
 
+    // should synchronize the information of the attackee and the hit fireball to delete
+    receive_attack_message(attackee_uuid, x, y, angle, damage, ball_uuid) {
+        let attacker = this.get_player(uuid);
+        let attackee = this.get_player(attackee_uuid);
+        if (attacker && attackee) {
+            // handle the attack action
+            attackee.receive_attack_message(x, y, angle, damage, ball_uuid, attacker);
+        }
+    }
+
+    send_attack_message(uuid, attackee_uuid, x, y, angle, damage, ball_uuid) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "attack",
+            'uuid': outer.uuid,
+            'attackee_uuid': attackee_uuid,
+            'x': x,
+            'y': y,
+            'angle': angle,
+            'damage': damage,
+            'ball_uuid': ball_uuid,
+        }));
+    }
+}

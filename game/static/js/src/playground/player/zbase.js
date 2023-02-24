@@ -25,10 +25,22 @@ class Player extends GameEngine {
             // all the enemy and myself should render the photo
             this.img = new Image();
             this.img.src = this.photo;
+
+            if (this.character === "me") {
+                this.fireball_coldtime = 3; // 3s for cool down time
+            }
         }
     }
 
     start() {
+        this.playground.player_count ++;
+        this.playground.notice_board.write("Ready to begin: " + this.playground.player_count + " people");
+
+        if (this.playground.player_count >= 3) {
+            this.playground.status = "fighting";
+            this.playground.notice_board.write("Fighting!");
+        }
+
         if (this.character === "me") {
             this.add_listening_events();
         }
@@ -45,6 +57,8 @@ class Player extends GameEngine {
             return false;
         });
         this.playground.game_map.$canvas.mousedown(function (e) {
+            if (outer.playground.status !== "fighting") return false;
+
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
                 let tx = (e.clientX - rectangle.left) / outer.playground.scale;
@@ -57,6 +71,7 @@ class Player extends GameEngine {
                 }
             }
             else if (e.which == 1) { // left click
+                if (outer.fireball_coldtime > outer.eps) return false; // cold time
                 let tx = (e.clientX - rectangle.left) / outer.playground.scale;
                 let ty = (e.clientY - rectangle.top) / outer.playground.scale;
                 if (outer.current_skill === "fireball") {
@@ -70,6 +85,9 @@ class Player extends GameEngine {
             }
         });
         $(window).keydown(function (e) { // keycode
+            if (outer.playground.status !== "fighting") return false;
+            if (outer.fireball_coldtime > outer.eps) return false; // cold time
+
             if (e.which == 81) {
                 outer.current_skill = "fireball";
                 return false;
@@ -95,7 +113,7 @@ class Player extends GameEngine {
 
     // remove the fireball from the playground's game_object array
     destroy_fireball(uuid) {
-        for (let i = 0; i < this.fireballs.length; i ++) {
+        for (let i = 0; i < this.fireballs.length; i++) {
             let fireball = this.fireballs[i];
             if (fireball.uuid === uuid) {
                 this.fireballs.destroy();
@@ -140,13 +158,28 @@ class Player extends GameEngine {
         this.speed *= 0.8;
     }
 
+    receive_attack(x, y, angle, damage, ball_uuid, attacker) {
+        attacker.destroy_fireball(ball_uuid);
+        this.x = x;
+        this.y = y;
+        this.be_attacked(angle, damage);
+    }
+
     update() {
+        this.spent_time += this.time_delta / 1000;
+        if (this.character == "me" && this.playground.status === "fighting")
+            this.update_coldtime();
+
         this.update_move();
         this.render();
     }
 
+    update_coldtime() {
+        this.fireball_coldtime -= this.time_delta / 1000;
+        this.fireball_coldtime = Math.max(0, this.fireball_coldtime);
+    }
+
     update_move() {
-        this.spent_time += this.time_delta / 1000;
         // shoot at the player with a probability 1/300, which means enemy will shoot at player every 5 secs and 5 secs after start.
         if (this.character === "robot" && this.spent_time > 5 && Math.random() < 1 / 300) {
             let player = this.playground.players[Math.floor(Math.random() * this.playground.players.length)];

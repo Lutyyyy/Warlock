@@ -25,12 +25,17 @@ class FireBall extends GameEngine {
     }
 
     update() {
+        // out of the firing range
         if (this.move_length < this.eps) {
             this.destroy();
             return false;
         }
+
         this.update_move();
-        this.update_attack();
+
+        if (this.player.character !== "enemy") {
+            this.update_attack();
+        }
 
         this.render();
     }
@@ -54,6 +59,12 @@ class FireBall extends GameEngine {
     attack(player) {
         let angle = Math.atan2(player.y - this.y, player.x - this.x);
         player.be_attacked(angle, this.damage);
+
+        let outer = this;
+        if (this.playground.mode === "multi mode") {
+            outer.playground.mps.send_attack_message(player.uuid, player.x, player.y, angle, outer.damage, outer.uuid);
+        }
+
         this.destroy(); // destroy the fireball
     }
 
@@ -74,7 +85,7 @@ class FireBall extends GameEngine {
     // remove the fireball from the players' fireball array
     on_destroy() {
         let fireballs = this.player.fireballs;
-        for (let i = 0; i < fireballs.length; i ++) {
+        for (let i = 0; i < fireballs.length; i++) {
             if (fireballs[i] === this) {
                 fireballs.splice(i, 1);
                 break;
