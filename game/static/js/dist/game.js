@@ -57,6 +57,80 @@ class GameMenu {
         this.$menu.hide();
     }
 }
+class ChatField {
+    constructor(playground) {
+        this.playground = playground;
+
+        this.$history = $(`<div class="game-chat-field-history">历史记录</div>`);
+        this.$input = $(`<input type="text" class="game-chat-field-input">`);
+
+        this.$history.hide();
+        this.$input.hide();
+        this.function_id = null;
+
+        this.playground.$playground.append(this.$history);
+        this.playground.$playground.append(this.$input);
+
+        this.start();
+    }
+
+    start() {
+        this.add_listening_events();
+    }
+
+    add_listening_events() {
+        let outer = this;
+        this.$input.keydown(function(e) {
+            if (e.which === 27) { // Esc
+                outer.hide_input();
+                return false;
+            }
+            else if (e.which === 13) {
+                let username = outer.playground.root.settings.username;
+                let text = outer.$input.val();
+                if (text) {
+                    outer.$input.val("");
+                    outer.add_message(username, text);
+                    return false;
+                }
+            }
+        });
+    }
+
+    render_message(message) {
+        return $(`<div>${message}</div>`);
+    }
+
+    add_message(username, text) {
+        this.show_history();
+        let message = `[${username}]${text}`;
+        this.$history.append(this.render_message(message));
+        this.$history.scrollTop(this.$history[0].scrollHeight);
+    }
+
+    show_history() {
+        let outer = this;
+        this.$history.fadeIn();
+
+        if (this.function_id) clearTimeout(this.function_id);
+
+        this.function_id = setTimeout(function() {
+            outer.$history.fadeOut();
+            outer.function_id = null;
+        }, 3000);
+    }
+
+    show_input() {
+        this.show_history();
+        this.$input.show();
+        this.$input.focus();
+    }
+
+    hide_input() {
+        this.$input.hide();
+        this.playground.game_map.$canvas.focus();
+    }
+}
 let GAME_OBJECTS = [];
 
 class GameEngine {
@@ -118,7 +192,7 @@ class GameMap extends GameEngine {
     constructor(playground) {
         super();
         this.playground = playground;
-        this.$canvas = $(`<canvas></canvas>`);
+        this.$canvas = $(`<canvas tabindex=0></canvas>`);
         this.ctx = this.$canvas[0].getContext('2d');
         this.ctx.canvas.width = this.playground.width;
         this.ctx.canvas.height = this.playground.height;
@@ -126,6 +200,7 @@ class GameMap extends GameEngine {
     }
 
     start() {
+        this.$canvas.focus();
     }
 
     resize() {
@@ -277,7 +352,7 @@ class Player extends GameEngine {
         });
         this.playground.game_map.$canvas.mousedown(function (e) {
             if (outer.playground.status !== "fighting")
-                return false;
+                return true;
 
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
@@ -314,7 +389,18 @@ class Player extends GameEngine {
             }
         });
 
-        $(window).keydown(function (e) { // keycode
+        this.playground.game_map.$canvas.keydown(function (e) { // keycode
+            if (e.which === 13) { // enter
+                if (outer.playground.mode === "multi mode") { // open the chat window
+                    outer.playground.chat_field.show_input();
+                    return false;
+                }
+            }
+            else if (e.which === 27) { // Esc
+                if (outer.playground.mode === "multi mode") { // close the chat window
+                    outer.playground.chat_field.hide_input();
+                }
+            }
             if (outer.playground.status !== "fighting")
                 return true;
 
@@ -690,8 +776,11 @@ class MultiPlayerSocket {
             else if (event === "blink") {
                 outer.receive_blink_message(uuid, data.tx, data.ty);
             }
-            else if (event == "attack") {
+            else if (event === "attack") {
                 outer.receive_attack_message(uuid, data.attackee_uuid, data.x, data.y, data.angle, data.damage, data.ball_uuid);
+            }
+            else if (event === "message") {
+                outer.receive_message_message(uuid, data.text);
             }
         }
     }
@@ -792,6 +881,22 @@ class MultiPlayerSocket {
             player.blink(tx, ty);
         }
     }
+
+    send_message_message(text) {
+        let outer = this;
+        this.ws.send(JSON.stringfy({
+            'event': "message",
+            'uuid': outer.uuid,
+            'text': text,
+        }));
+    }
+
+    receive_message_message(uuid, text) {
+        let player = this.get_player(uuid);
+        if (player) {
+            player.playground.chat_field.add_message(player.username, text);
+        }
+    }
 }
 class GamePlayground {
     constructor(root) {
@@ -861,6 +966,7 @@ class GamePlayground {
             }
         }
         else if (mode === "multi mode") {
+            this.chat_field = new ChatField(this);
             this.mps = new MultiPlayerSocket(this); // create a wss connection try to establish a wss connect
             this.mps.uuid = this.players[0].uuid; // my uuid
 

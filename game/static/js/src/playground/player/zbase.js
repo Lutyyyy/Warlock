@@ -64,7 +64,7 @@ class Player extends GameEngine {
         });
         this.playground.game_map.$canvas.mousedown(function (e) {
             if (outer.playground.status !== "fighting")
-                return false;
+                return true;
 
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
@@ -101,7 +101,18 @@ class Player extends GameEngine {
             }
         });
 
-        $(window).keydown(function (e) { // keycode
+        this.playground.game_map.$canvas.keydown(function (e) { // keycode
+            if (e.which === 13) { // enter
+                if (outer.playground.mode === "multi mode") { // open the chat window
+                    outer.playground.chat_field.show_input();
+                    return false;
+                }
+            }
+            else if (e.which === 27) { // Esc
+                if (outer.playground.mode === "multi mode") { // close the chat window
+                    outer.playground.chat_field.hide_input();
+                }
+            }
             if (outer.playground.status !== "fighting")
                 return true;
 

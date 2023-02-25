@@ -66,6 +66,7 @@ class GamePlayground {
             }
         }
         else if (mode === "multi mode") {
+            this.chat_field = new ChatField(this);
             this.mps = new MultiPlayerSocket(this); // create a wss connection try to establish a wss connect
             this.mps.uuid = this.players[0].uuid; // my uuid
 
