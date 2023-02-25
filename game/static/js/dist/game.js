@@ -65,7 +65,6 @@ class GameEngine {
         this.has_call_start = false; // has executed the start() or not
         this.time_delta = 0; // The time interval between the current frame and the previous frame
         this.uuid = this.create_uuid();
-
     }
 
     // create a random 9-bit id for every game object
@@ -242,6 +241,12 @@ class Player extends GameEngine {
 
             if (this.character === "me") {
                 this.fireball_coldtime = 3; // 3s for cool down time
+                this.fireball_img = new Image();
+                this.fireball_img.src = "https://game.gtimg.cn/images/yxzj/img201606/summoner/80104.jpg";
+
+                this.blink_coldtime = 5;
+                this.blink_img = new Image();
+                this.blink_img.src = "https://game.gtimg.cn/images/yxzj/img201606/summoner/80115.jpg";
             }
         }
     }
@@ -271,7 +276,8 @@ class Player extends GameEngine {
             return false;
         });
         this.playground.game_map.$canvas.mousedown(function (e) {
-            if (outer.playground.status !== "fighting") return false;
+            if (outer.playground.status !== "fighting")
+                return false;
 
             const rectangle = outer.ctx.canvas.getBoundingClientRect();
             if (e.which === 3) { // right click
@@ -285,25 +291,44 @@ class Player extends GameEngine {
                 }
             }
             else if (e.which == 1) { // left click
-                if (outer.fireball_coldtime > outer.eps) return false; // cold time
                 let tx = (e.clientX - rectangle.left) / outer.playground.scale;
                 let ty = (e.clientY - rectangle.top) / outer.playground.scale;
                 if (outer.current_skill === "fireball") {
+                    if (outer.fireball_coldtime > outer.eps) return false; // cold time
+
                     let fireball = outer.shoot_fireball(tx, ty);
 
                     if (outer.playground.mode === "multi mode") {
-                        outer.playground.mps.send_shoot_fireball(fireball.ball_uuid, tx, ty);
+                        outer.playground.mps.send_shoot_fireball_message(fireball.ball_uuid, tx, ty);
+                    }
+                }
+                else if (outer.current_skill === "blink") {
+                    if (outer.blink_coldtime > outer.eps) return false; // cold time
+                    outer.blink(tx, ty);
+
+                    if (outer.playground.mode === "multi mode") {
+                        outer.playground.mps.send_blink_message(tx, ty);
                     }
                 }
                 outer.current_skill = null;
             }
         });
-        $(window).keydown(function (e) { // keycode
-            if (outer.playground.status !== "fighting") return false;
-            if (outer.fireball_coldtime > outer.eps) return false; // cold time
 
-            if (e.which == 81) {
+        $(window).keydown(function (e) { // keycode
+            if (outer.playground.status !== "fighting")
+                return true;
+
+            if (e.which === 81) {
+                if (outer.fireball_coldtime > outer.eps)
+                    return true; // cold time
+
                 outer.current_skill = "fireball";
+                return false;
+            }
+            else if (e.which === 70) {
+                if (outer.blink_coldtime > outer.eps)
+                    return true;
+                outer.current_skill = "blink";
                 return false;
             }
         });
@@ -321,8 +346,21 @@ class Player extends GameEngine {
         let fireball = new FireBall(this.playground, this, x, y, radius, vx, vy, speed, color, move_len, 0.005);
         this.fireballs.push(fireball);
 
+        this.fireball_coldtime = 3; // reset cold time
+
         // inorder to get the uuid of the fireball
         return fireball;
+    }
+
+    blink(tx, ty) {
+        let d = this.get_dist(this.x, this.y, tx, ty);
+        d = Math.min(0.8, d); // maximum distance of blink is 0.8
+        let angle = Math.atan2(ty - this.y, tx - this.x);
+        this.x += d * Math.cos(angle);
+        this.y += d * Math.sin(angle);
+
+        this.blink_coldtime = 5;
+        this.move_distance = 0; // stop after blink
     }
 
     // remove the fireball from the playground's game_object array
@@ -391,6 +429,9 @@ class Player extends GameEngine {
     update_coldtime() {
         this.fireball_coldtime -= this.time_delta / 1000;
         this.fireball_coldtime = Math.max(0, this.fireball_coldtime);
+
+        this.blink_coldtime -= this.time_delta / 1000;
+        this.blink_coldtime = Math.max(this.blink_coldtime, 0);
     }
 
     update_move() {
@@ -440,16 +481,61 @@ class Player extends GameEngine {
             this.ctx.drawImage(this.img, (this.x - this.radius) * scale, (this.y - this.radius) * scale, this.radius * 2 * scale, this.radius * 2 * scale);
             this.ctx.restore();
         }
-        else {
+        else { // draw circle
             this.ctx.beginPath();
             this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.fillStyle = this.color;
             this.ctx.fill();
         }
 
+        if (this.character === "me" && this.playground.status === "fighting") {
+            this.render_skill_coldtime();
+        }
+    }
+
+    render_skill_coldtime() {
+        let x = 1.5, y = 0.9, r = 0.04, scale = this.playground.scale;
+
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(x * scale, y * scale, r * scale, 0, Math.PI * 2, false);
+        this.ctx.stroke();
+        this.ctx.clip();
+        this.ctx.drawImage(this.fireball_img, (x - r) * scale, (y - r) * scale, r * 2 * scale, r * 2 * scale);
+        this.ctx.restore();
+
+        if (this.fireball_coldtime > 0) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x * scale, y * scale);
+            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.fireball_coldtime / 3) - Math.PI / 2, true); // draw part of the circle
+            this.ctx.lineTo(x * scale, y * scale);
+            this.ctx.fillStyle = "rgba(0, 0, 255, 0.6)";  // limpid blue
+            this.ctx.fill();
+        }
+
+        x = 1.62, y = 0.9, r = 0.04;
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(x * scale, y * scale, r * scale, 0, Math.PI * 2, false);
+        this.ctx.stroke();
+        this.ctx.clip();
+        this.ctx.drawImage(this.blink_img, (x - r) * scale, (y - r) * scale, r * 2 * scale, r * 2 * scale);
+        this.ctx.restore();
+
+        if (this.blink_coldtime > 0) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x * scale, y * scale);
+            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.blink_coldtime / 5) - Math.PI / 2, true); // draw part of the circle
+            this.ctx.lineTo(x * scale, y * scale);
+            this.ctx.fillStyle = "rgba(0, 0, 255, 0.6)";  // limpid blue
+            this.ctx.fill();
+        }
     }
 
     on_destroy() {
+        if (this.character === "me")
+            this.playground.status === "over";
+
         for (let i = 0; i < this.playground.players.length; i++) {
             if (this.playground.players[i] === this) {
                 this.playground.players.splice(i, 1);
@@ -583,6 +669,7 @@ class MultiPlayerSocket {
     // handle the data come from server(backend)
     receive() {
         let outer = this;
+
         // callback funciton after receive data from server(backend)
         this.ws.onmessage = function (e) {
             // string-->json
@@ -599,6 +686,9 @@ class MultiPlayerSocket {
             }
             else if (event === "shoot_fireball") {
                 outer.receive_shoot_fireball_message(uuid, data.tx, data.ty, data.ball_uuid);
+            }
+            else if (event === "blink") {
+                outer.receive_blink_message(uuid, data.tx, data.ty);
             }
             else if (event == "attack") {
                 outer.receive_attack_message(uuid, data.attackee_uuid, data.x, data.y, data.angle, data.damage, data.ball_uuid);
@@ -684,6 +774,23 @@ class MultiPlayerSocket {
             'damage': damage,
             'ball_uuid': ball_uuid,
         }));
+    }
+
+    send_blink_message(tx, ty) {
+        let outer = this;
+        this.ws.send(JSON.stringfy({
+            'event': "blink",
+            'uuid': outer.uuid,
+            'tx': tx,
+            'ty': ty,
+        }));
+    }
+
+    receive_blink_message(uuid, tx, ty) {
+        let player = this.get_player(uuid);
+        if (player) {
+            player.blink(tx, ty);
+        }
     }
 }
 class GamePlayground {

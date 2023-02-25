@@ -6,7 +6,6 @@ class GameEngine {
         this.has_call_start = false; // has executed the start() or not
         this.time_delta = 0; // The time interval between the current frame and the previous frame
         this.uuid = this.create_uuid();
-
     }
 
     // create a random 9-bit id for every game object

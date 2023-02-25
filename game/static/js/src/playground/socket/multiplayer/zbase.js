@@ -27,6 +27,7 @@ class MultiPlayerSocket {
     // handle the data come from server(backend)
     receive() {
         let outer = this;
+
         // callback funciton after receive data from server(backend)
         this.ws.onmessage = function (e) {
             // string-->json
@@ -43,6 +44,9 @@ class MultiPlayerSocket {
             }
             else if (event === "shoot_fireball") {
                 outer.receive_shoot_fireball_message(uuid, data.tx, data.ty, data.ball_uuid);
+            }
+            else if (event === "blink") {
+                outer.receive_blink_message(uuid, data.tx, data.ty);
             }
             else if (event == "attack") {
                 outer.receive_attack_message(uuid, data.attackee_uuid, data.x, data.y, data.angle, data.damage, data.ball_uuid);
@@ -128,5 +132,22 @@ class MultiPlayerSocket {
             'damage': damage,
             'ball_uuid': ball_uuid,
         }));
+    }
+
+    send_blink_message(tx, ty) {
+        let outer = this;
+        this.ws.send(JSON.stringfy({
+            'event': "blink",
+            'uuid': outer.uuid,
+            'tx': tx,
+            'ty': ty,
+        }));
+    }
+
+    receive_blink_message(uuid, tx, ty) {
+        let player = this.get_player(uuid);
+        if (player) {
+            player.blink(tx, ty);
+        }
     }
 }

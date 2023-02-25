@@ -40,7 +40,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
                 }))
 
         await self.channel_layer.group_add(self.room_name, self.channel_name)
-        
+
         players = cache.get(self.room_name)
         # add to the room
         players.append({
@@ -62,6 +62,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
                     'photo': data['photo'],
                 }
         )
+
 
     # send to everyone in the group for the specific player's moving action
     async def move_to(self, data):
@@ -91,6 +92,21 @@ class MultiPlayer(AsyncWebsocketConsumer):
             }
         )
 
+
+    async def blink(self, data):
+        await self.channel_layer.group_send(
+            self.room_name,
+            {
+                'type': "group_send_events",
+                'event': "blink",
+                'uuid': data['uuid'],
+                'tx': data['tx'],
+                'ty': data['ty'],
+            }
+        )
+
+
+
     async def attack(self, data):
         await self.channel_layer.group_send(
             self.room_name,
@@ -106,6 +122,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
                 'ball_uuid': data['ball_uuid'],
             }
         )
+
 
     # receive the data from the group member
     # function name should same as the type name
@@ -126,3 +143,5 @@ class MultiPlayer(AsyncWebsocketConsumer):
             await self.shoot_fireball(data)
         elif event == "attack":
             await self.attack(data)
+        elif event == "blink":
+            await self.blink(data)
