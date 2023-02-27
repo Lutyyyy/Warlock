@@ -26,7 +26,7 @@ class ChatField {
                 outer.hide_input();
                 return false;
             }
-            else if (e.which === 13) {
+            else if (e.which === 13) { // Enter
                 let username = outer.playground.root.settings.username;
                 let text = outer.$input.val();
                 if (text) {
