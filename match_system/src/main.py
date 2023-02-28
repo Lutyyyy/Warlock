@@ -16,6 +16,10 @@ from queue import Queue
 from time import sleep
 from threading import Thread
 
+from Warlock.asgi import channel_layer
+from asgiref.sync import async_to_sync
+from django.core.cache import cache
+
 queue = Queue()  # message queue
 
 class Player:
@@ -36,13 +40,41 @@ class Pool:
         self.players.append(player)
 
     def check_match(self, a, b):
+        if a.username == b.username:
+            return False
+
         dt = abs(a.score, b.score)
         a_max_dif = a.waiting_time * 50
-        b_max_dif = b.waiting_time * 50
+        b_max_dif = b.waiting_time * 50  
         return dt <= a_max_dif and dt <= b_max_dif
 
     def match_success(self, ps):
-        print("match successfully: %s %s" % (ps[0], ps[1], ps[2]))
+        print("match successfully: %s %s" % (ps[0].username, ps[1].username, ps[2].username))
+        players = []
+        # room_name = "room + a.uuid + b.uuid + c.uuid".
+        # help to find out someone belongs to which room quickly: cache.keys("*a.uuid*")
+        room_name = "room-%s-%s-%s" % (ps[0].uuid, ps[1].uuid, ps[2].uuid)
+        for p in players:
+            async_to_sync(channel_layer.group_add)(room_name, p.channel_name)
+            players.append({
+                'uuid': p.uuid,
+                'username': p.username,
+                'photo': p.photo,
+                'hp': 100,  # Health Point
+            })
+
+        cache.set(room_name, players, 3600)  # valid time: 1 hour
+        for p in ps:
+            async_to_sync(channel_layer.group_send)(
+                room_name,
+                {
+                    'type': "group_send_events",
+                    'event': "create_player",
+                    'uuid': p.uuid,
+                    'username': p.username,
+                    'photo': p.photo,
+                }
+            )
 
     def match(self):
         while len(self.players) >= 3:
@@ -69,6 +101,7 @@ class MatchHandler:
         player = Player(score, uuid, username, photo, channel_name)
         queue.put(player)
         return 0
+
 
 def get_player_from_queue():
     try:

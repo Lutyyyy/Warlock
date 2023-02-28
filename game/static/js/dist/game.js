@@ -85,14 +85,15 @@ class ChatField {
                 outer.hide_input();
                 return false;
             }
-            else if (e.which === 13) {
+            else if (e.which === 13) { // Enter
                 let username = outer.playground.root.settings.username;
                 let text = outer.$input.val();
                 if (text) {
                     outer.$input.val("");
                     outer.add_message(username, text);
-                    return false;
+                    outer.playground.mps.send_message_message(username, text);
                 }
+                return false;
             }
         });
     }
@@ -780,7 +781,7 @@ class MultiPlayerSocket {
                 outer.receive_attack_message(uuid, data.attackee_uuid, data.x, data.y, data.angle, data.damage, data.ball_uuid);
             }
             else if (event === "message") {
-                outer.receive_message_message(uuid, data.text);
+                outer.receive_message_message(uuid, data.username, data.text);
             }
         }
     }
@@ -887,15 +888,13 @@ class MultiPlayerSocket {
         this.ws.send(JSON.stringfy({
             'event': "message",
             'uuid': outer.uuid,
+            'username': username,
             'text': text,
         }));
     }
 
-    receive_message_message(uuid, text) {
-        let player = this.get_player(uuid);
-        if (player) {
-            player.playground.chat_field.add_message(player.username, text);
-        }
+    receive_message_message(uuid, username, text) {
+        this.playground.chat_field.add_message(username, text);
     }
 }
 class GamePlayground {
