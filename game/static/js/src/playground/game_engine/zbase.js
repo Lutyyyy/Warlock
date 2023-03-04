@@ -24,6 +24,9 @@ class GameEngine {
     update() { // refresh the object on every frame
     }
 
+    late_update() { // executed once at the end of each frame
+    }
+
     on_destroy() { // execute before the current object deleted
     }
 
@@ -50,6 +53,12 @@ let GAME_ANIMATION = function (timestamp) {
             obj.update();
         }
     }
+
+    for (let i = 0; i < GAME_OBJECTS.length; i ++) {
+        let obj = GAME_OBJECTS[i];
+        obj.late_update();
+    }
+
     last_timestamp = timestamp;
     requestAnimationFrame(GAME_ANIMATION);
 }

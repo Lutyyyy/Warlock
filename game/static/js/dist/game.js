@@ -158,6 +158,9 @@ class GameEngine {
     update() { // refresh the object on every frame
     }
 
+    late_update() { // executed once at the end of each frame
+    }
+
     on_destroy() { // execute before the current object deleted
     }
 
@@ -184,6 +187,12 @@ let GAME_ANIMATION = function (timestamp) {
             obj.update();
         }
     }
+
+    for (let i = 0; i < GAME_OBJECTS.length; i ++) {
+        let obj = GAME_OBJECTS[i];
+        obj.late_update();
+    }
+
     last_timestamp = timestamp;
     requestAnimationFrame(GAME_ANIMATION);
 }
@@ -506,11 +515,19 @@ class Player extends GameEngine {
 
     update() {
         this.spent_time += this.time_delta / 1000;
+        this.update_win();
+
         if (this.character == "me" && this.playground.status === "fighting")
             this.update_coldtime();
 
         this.update_move();
         this.render();
+    }
+
+    update_win() { // check if win
+        if (this.playground.status === "fighting" && this.character === "me" && this.playground.players.length === 1) {
+            this.playground.score_board.win();
+        }
     }
 
     update_coldtime() {
@@ -621,7 +638,10 @@ class Player extends GameEngine {
 
     on_destroy() {
         if (this.character === "me")
-            this.playground.status === "over";
+            if (this.playground.status === "fighting") {
+                this.playground.status === "over";
+                this.playground.score_board.lose();
+            }
 
         for (let i = 0; i < this.playground.players.length; i++) {
             if (this.playground.players[i] === this) {
@@ -632,6 +652,66 @@ class Player extends GameEngine {
     }
 }
 
+class ScoreBoard extends GameEngine {
+    constructor(playground) {
+        super();
+        this.playground = playground;
+        this.ctx = this.playground.game_map.ctx;
+
+        this.state= null; // status: win or lose
+
+        this.win_image = new Image();
+        this.win_image.src = "https://cdn.acwing.com/media/article/image/2021/12/17/1_8f58341a5e-win.png";
+
+        this.lose_image = new Image();
+        this.lose_image.src = "https://cdn.acwing.com/media/article/image/2021/12/17/1_9254b5f95e-lose.png";
+    }
+
+    start() {
+    }
+
+    add_listening_events() {
+        let outer = this;
+        this.$canvas = this.playground.game_map.$canvas;
+
+        this.$canvas.on('click', function() {
+            outer.playground.hide();
+            outer.playground.root.menu.show();
+        });
+    }
+
+    win() {
+        let outer = this;
+        this.state = "win";
+
+        setTimeout(function() {
+            outer.add_listening_events();
+        }, 1000);
+    }
+
+    lose() {
+        let outer = this;
+        this.state = "lose";
+
+        setTimeout(function() {
+            outer.add_listening_events();
+        }, 1000);
+    }
+
+    late_update() {
+        this.render();
+    }
+
+    render() {
+        let len = this.playground.height / 2;
+        if (this.state === "win") {
+            this.ctx.drawImage(this.win_image, this.playground.width / 2 - len / 2, this.playground.height / 2 - len / 2, len, len);
+        }
+        else if (this.state === "lose") {
+            this.ctx.drawImage(this.lose_image, this.playground.width / 2 - len / 2, this.playground.height / 2 - len / 2, len, len);
+        }
+    }
+}
 class FireBall extends GameEngine {
     constructor(playground, player, x, y, radius, vx, vy, speed, color, move_length, damage) {
         super();
@@ -916,9 +996,25 @@ class GamePlayground {
 
     start() {
         let outer = this;
-        $(window).resize(function () {
+        let uuid = this.create_uuid();
+        $(window).on('resize.${uuid}',function () {
             outer.resize();
         });
+        // other platform
+        if (this.root.other_platform) {
+            this.root.other_platform.api.window.on_close(function() {
+                $(window).off('resize.${uuid}');
+            });
+        }
+    }
+
+    create_uuid() {
+        let res = "";
+        for (let i = 0; i < 8; i ++) {
+            let x = parseInt(Math.floor(Math.random() *10));
+            res += x;
+        }
+        return res;
     }
 
     update() {
@@ -951,6 +1047,7 @@ class GamePlayground {
         this.mode = mode;
         this.status = "waiting"; // waiting --> fighting --> over
         this.notice_board = new NoticeBoard(this);
+        this.score_board = new ScoreBoard(this);
         this.player_count = 0; // number of people in the playground
 
         this.players = []; // maintain all the players
@@ -978,7 +1075,28 @@ class GamePlayground {
 
     }
 
-    hide() { // hid the playground page
+    hide() { // hide the playground page
+        while (this.players && this.players.length > 0) {
+            this.players[0].destroy();
+        }
+
+        if (this.game_map) {
+            this.game_map.destroy();
+            this.game_map = null;
+        }
+
+        if (this.notice_board) {
+            this.notice_board.destroy();
+            this.notice_board = null;
+        }
+
+        if (this.score_board) {
+            this.score_board.destroy();
+            this.score_board = null;
+        }
+
+        this.$playground.empty(); // clean up the html object
+
         this.$playground.hide();
     }
 }

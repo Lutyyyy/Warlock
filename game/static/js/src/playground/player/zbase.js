@@ -217,11 +217,19 @@ class Player extends GameEngine {
 
     update() {
         this.spent_time += this.time_delta / 1000;
+        this.update_win();
+
         if (this.character == "me" && this.playground.status === "fighting")
             this.update_coldtime();
 
         this.update_move();
         this.render();
+    }
+
+    update_win() { // check if win
+        if (this.playground.status === "fighting" && this.character === "me" && this.playground.players.length === 1) {
+            this.playground.score_board.win();
+        }
     }
 
     update_coldtime() {
@@ -332,7 +340,10 @@ class Player extends GameEngine {
 
     on_destroy() {
         if (this.character === "me")
-            this.playground.status === "over";
+            if (this.playground.status === "fighting") {
+                this.playground.status === "over";
+                this.playground.score_board.lose();
+            }
 
         for (let i = 0; i < this.playground.players.length; i++) {
             if (this.playground.players[i] === this) {
