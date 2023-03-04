@@ -13,7 +13,7 @@ class GameMenu {
                     </div>
                     <br>
                     <div class="game_menu_filed_item game_menu_filed_item_settings">
-                        退出
+                        Exit
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@ class ChatField {
     constructor(playground) {
         this.playground = playground;
 
-        this.$history = $(`<div class="game-chat-field-history">历史记录</div>`);
+        this.$history = $(`<div class="game-chat-field-history">History</div>`);
         this.$input = $(`<input type="text" class="game-chat-field-input">`);
 
         this.$history.hide();

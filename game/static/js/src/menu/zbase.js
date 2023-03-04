@@ -13,7 +13,7 @@ class GameMenu {
                     </div>
                     <br>
                     <div class="game_menu_filed_item game_menu_filed_item_settings">
-                        退出
+                        Exit
                     </div>
                 </div>
             </div>
